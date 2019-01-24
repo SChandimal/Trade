@@ -2,13 +2,14 @@ package com.trustatrader.trustatrader;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 
 @SpringBootApplication
-public class TrustatraderApplication {
+public class TrustatraderApplication extends SpringBootServletInitializer {
 
-	public static void main(String[] args) {
-		SpringApplication.run(TrustatraderApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(TrustatraderApplication.class, args);
+    }
 
 }
 

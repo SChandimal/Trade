@@ -1,6 +1,8 @@
 package com.trustatrader.trustatrader.config;
 
+import com.trustatrader.trustatrader.common.Combination;
 import com.trustatrader.trustatrader.common.Item_Model;
+import com.trustatrader.trustatrader.repo.CombinationRepo;
 import com.trustatrader.trustatrader.repo.item_repo;
 import com.trustatrader.trustatrader.service.Item_Service;
 import org.openqa.selenium.*;
@@ -8,76 +10,94 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @RestController
 public class BrowerTrustatrader implements InitializingBean {
-    private FirefoxDriver driver = null;
+
 
     @Autowired
     private Item_Service itemService;
     @Autowired
     private item_repo itemRepo;
+    @Autowired
+    private CombinationRepo combinationRepo;
+
+    private static ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
     public void initialise() throws Exception {
-        System.setProperty("webdriver.gecko.driver", "geckodriver.exe");
-        System.setProperty(FirefoxDriver.SystemProperty.DRIVER_USE_MARIONETTE, "true");
-        System.setProperty(FirefoxDriver.SystemProperty.BROWSER_LOGFILE, "/dev/null");
-        FirefoxOptions options = new FirefoxOptions();
-        options.setHeadless(false);
-        driver = new FirefoxDriver();
-        scrape("https://www.trustatrader.com");
-    }
 
-    public void scrape(String link) throws InterruptedException, IOException {
-        String trade[] = {"Drainage"};
-        String locations[] = {"London",
-                "Birmingham",
-                "Glasgow",
-                "Leeds",
-                "Bristol",
-                "Liverpool",
-                "Manchester",
-                "Sheffield",
-                "Edinburgh",
-                "Cardiff/Caerdydd",
-                "Leicester",
-                "Stoke-on-Trent",
-                "Bradford",
-                "Coventry",
-                "Nottingham",
-                "Hampstead",
-                "Hertfordshire",
-                "Wiltshire",
-                "Dorset",
-                "York"};
+        for (int i = 0; i < 5; i++) {
+            new Thread(() -> {
+
+                System.setProperty("webdriver.gecko.driver", "/var/lib/tomcat8/geckodriver");
+                FirefoxOptions options = new FirefoxOptions();
+                options.setHeadless(true);
+
+                FirefoxDriver driver = new FirefoxDriver(options);
+                System.setProperty(FirefoxDriver.SystemProperty.DRIVER_USE_MARIONETTE, "true");
+                System.setProperty(FirefoxDriver.SystemProperty.BROWSER_LOGFILE, "/dev/null");
 
 
-        for (String item : trade) {
-            for (String location : locations) {
-                driver.get(link);
-                WebElement catagory = driver.findElementByXPath("//*[@id=\"search__q\"]");
-                WebElement locationFilde = driver.findElementByXPath("//*[@id=\"search__location\"]");
-                WebElement serachBtn = driver.findElementByXPath("/html/body/div[1]/header/form/fieldset/div/button");
-                JavascriptExecutor jse = (JavascriptExecutor) driver;
-                System.err.println("+++++++++++++++++++++++++++++" + item);
-                System.err.println("++++++++++++++++++++++++++++++++" + location);
-                Thread.sleep(2000);
-                catagory.sendKeys(item);
-                catagory.sendKeys(Keys.ENTER);
-                locationFilde.sendKeys(location);
-                locationFilde.sendKeys(Keys.ENTER);
-                Thread.sleep(2000);
-                catagory.sendKeys(Keys.ENTER);
+                try {
 
-                scrapeInerpage(location, item);
-            }
+                    scrape("https://www.trustatrader.com", driver);
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }).start();
         }
+
     }
 
-    private void scrapeInerpage(String location, String trade) throws InterruptedException {
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Combination getCombination() {
+        readWriteLock.writeLock().lock();
+        Combination top = combinationRepo.getTopByStatusEquals("ADD");
+        top.setStatus("SEARCHING");
+        combinationRepo.saveAndFlush(top);
+        readWriteLock.writeLock().unlock();
+        return top;
+    }
+
+    public void scrape(String link, FirefoxDriver driver) throws InterruptedException, IOException {
+        while (true) {
+            Combination combination = getCombination();
+            driver.get(link);
+            WebElement catagory = driver.findElementByXPath("//*[@id=\"search__q\"]");
+            WebElement locationFilde = driver.findElementByXPath("//*[@id=\"search__location\"]");
+            WebElement serachBtn = driver.findElementByXPath("/html/body/div[1]/header/form/fieldset/div/button");
+            JavascriptExecutor jse = (JavascriptExecutor) driver;
+
+            Thread.sleep(2000);
+            catagory.sendKeys(combination.getTrade());
+            catagory.sendKeys(Keys.ENTER);
+            locationFilde.sendKeys(combination.getLocation());
+            locationFilde.sendKeys(Keys.ENTER);
+            Thread.sleep(2000);
+            catagory.sendKeys(Keys.ENTER);
+
+            scrapeInerpage(combination.getLocation(), combination.getTrade(), driver);
+            combination.setStatus("DONE");
+            combinationRepo.saveAndFlush(combination);
+        }
+
+
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void scrapeInerpage(String location, String trade, FirefoxDriver driver) throws InterruptedException {
         while (true) {
             Item_Model model = null;
             Thread.sleep(5000);
