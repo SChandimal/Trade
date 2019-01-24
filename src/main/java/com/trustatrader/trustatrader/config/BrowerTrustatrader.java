@@ -32,36 +32,7 @@ public class BrowerTrustatrader implements InitializingBean {
     }
 
     public void scrape(String link) throws InterruptedException, IOException {
-        String trade[] = {"Electrician",
-                "Locksmith",
-                "Roofer",
-                "Landscaping",
-                "Paving",
-                "Plumber",
-                "Heating",
-                "Boilers",
-                "Scaffolding",
-                "Painter",
-                "Decorater",
-                "Plasterer",
-                "Builder",
-                "Construction",
-                "Drainage",
-                "Guttering",
-                "Cleaning",
-                "Removals",
-                "Bathrooms",
-                "Kitchens",
-                "Gardening",
-                "Home Improvements",
-                "Fencing",
-                "Gates",
-                "Garages",
-                "Loft Conversions",
-                "Pest Control",
-                "Skip Hire",
-                "Grab Hire",
-                "Groundwor"};
+        String trade[] = {"Drainage"};
         String locations[] = {"London",
                 "Birmingham",
                 "Glasgow",
@@ -71,17 +42,17 @@ public class BrowerTrustatrader implements InitializingBean {
                 "Manchester",
                 "Sheffield",
                 "Edinburgh",
-                "Cardiff",
+                "Cardiff/Caerdydd",
                 "Leicester",
                 "Stoke-on-Trent",
                 "Bradford",
                 "Coventry",
                 "Nottingham",
-                "Hampshire",
+                "Hampstead",
                 "Hertfordshire",
                 "Wiltshire",
                 "Dorset",
-                "Yorkshi"};
+                "York"};
 
 
         for (String item : trade) {
